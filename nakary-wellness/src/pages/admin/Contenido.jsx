@@ -4,6 +4,7 @@ import { backend } from '../../data';
 import { authErrorMsg } from '../../auth';
 import { useSite } from '../../hooks';
 import { DEFAULT_SITE } from '../../defaults';
+import { rutaServicio } from '../../components/SiteLayout';
 import { Btn, Card, Field, ImageUpload, Input, ListEditor, PageLoader, Select, Textarea, useToast } from '../../components/ui';
 
 const Section = ({ title, hint, children }) => (
@@ -33,6 +34,7 @@ export default function Contenido() {
     try {
       const limpio = {
         ...d,
+        nutricionItems: (d.nutricionItems || []).map((x) => x.trim()).filter(Boolean),
         planes: d.planes.map((p) => ({ ...p, items: (p.items || []).map((x) => x.trim()).filter(Boolean) })),
         updatedAt: new Date().toISOString(),
       };
@@ -120,7 +122,7 @@ export default function Contenido() {
         <ListEditor
           items={d.servicios}
           onChange={(servicios) => set({ servicios })}
-          blank={{ icono: 'dumbbell', titulo: '', desc: '', detalle: '', enlace: '#planes' }}
+          blank={{ icono: 'dumbbell', titulo: '', desc: '', detalle: '', enlace: '/entrenamiento' }}
           addLabel="Agregar servicio"
           itemLabel={(it) => it.titulo || 'Servicio'}
           render={(it, up) => (
@@ -134,8 +136,8 @@ export default function Contenido() {
               <Field label="Descripción" className="sm:col-span-2"><Textarea rows={2} value={it.desc} onChange={(e) => up({ desc: e.target.value })} /></Field>
               <Field label="Detalle corto" className="sm:col-span-2"><Input value={it.detalle} onChange={(e) => up({ detalle: e.target.value })} /></Field>
               <Field label="Al tocar, ir a">
-                <Select value={it.enlace} onChange={(e) => up({ enlace: e.target.value })}>
-                  <option value="#planes">Planes</option><option value="#resultados">Casos de éxito</option><option value="#contacto">Contacto</option>
+                <Select value={rutaServicio(it.enlace)} onChange={(e) => up({ enlace: e.target.value })}>
+                  <option value="/nutricion">Página de Nutrición</option><option value="/entrenamiento">Página de Entrenamiento (planes)</option><option value="/evolucion">Página de Evolución (casos)</option>
                 </Select>
               </Field>
             </div>
@@ -143,19 +145,44 @@ export default function Contenido() {
         />
       </Section>
 
-      <Section title="Planes y precios">
+      <Section title="Página de Nutrición" hint="Lo que se ve al tocar la categoría Nutrición.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Título (parte normal)"><Input value={d.nutricionTitulo1} onChange={(e) => set({ nutricionTitulo1: e.target.value })} /></Field>
+          <Field label="Título (parte destacada)"><Input value={d.nutricionTitulo2} onChange={(e) => set({ nutricionTitulo2: e.target.value })} /></Field>
+          <Field label="Texto de introducción" className="sm:col-span-2"><Textarea rows={2} value={d.nutricionIntro} onChange={(e) => set({ nutricionIntro: e.target.value })} /></Field>
+          <Field label="Título de la lista"><Input value={d.nutricionTituloLista} onChange={(e) => set({ nutricionTituloLista: e.target.value })} /></Field>
+          <Field label="Texto del botón"><Input value={d.nutricionBoton} onChange={(e) => set({ nutricionBoton: e.target.value })} /></Field>
+          <Field label="Qué incluye (uno por línea)" className="sm:col-span-2">
+            <Textarea rows={5} value={(d.nutricionItems || []).join('\n')} onChange={(e) => set({ nutricionItems: e.target.value.split('\n') })} />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Planes y precios" hint="Se ven en la página de Entrenamiento.">
         <ListEditor
           items={d.planes}
           onChange={(planes) => set({ planes })}
-          blank={{ nombre: '', badge: '', icono: 'users', descripcion: '', precio: '', moneda: '€', periodo: '/ Mes', tituloLista: 'Incluye', items: [''], idealPara: '', boton: 'Quiero empezar', destacado: false }}
+          blank={{ nombre: '', badge: '', icono: 'users', descripcion: '', precio: '', moneda: '€', periodo: '/ Mes', tituloLista: 'Incluye', items: [''], porPais: false, precioVE: '', precioResto: '', idealPara: '', boton: 'Quiero empezar', destacado: false }}
           addLabel="Agregar plan"
           itemLabel={(it) => it.nombre || 'Plan'}
           render={(it, up) => (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Nombre del plan"><Input value={it.nombre} onChange={(e) => up({ nombre: e.target.value })} /></Field>
               <Field label="Etiqueta (opcional)"><Input value={it.badge} onChange={(e) => up({ badge: e.target.value })} placeholder="Sede Valencia" /></Field>
-              <Field label="Precio"><Input value={it.precio} onChange={(e) => up({ precio: e.target.value })} /></Field>
-              <div className="grid grid-cols-2 gap-3">
+              <Field label="Tipo de precio">
+                <Select value={it.porPais ? 'pais' : 'unico'} onChange={(e) => up({ porPais: e.target.value === 'pais' })}>
+                  <option value="unico">Precio único</option><option value="pais">Según el país (Venezuela / otros)</option>
+                </Select>
+              </Field>
+              {it.porPais ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Precio Venezuela"><Input value={it.precioVE || ''} onChange={(e) => up({ precioVE: e.target.value })} /></Field>
+                  <Field label="Precio otros países"><Input value={it.precioResto || ''} onChange={(e) => up({ precioResto: e.target.value })} /></Field>
+                </div>
+              ) : (
+                <Field label="Precio"><Input value={it.precio || ''} onChange={(e) => up({ precio: e.target.value })} /></Field>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                 <Field label="Moneda"><Input value={it.moneda} onChange={(e) => up({ moneda: e.target.value })} /></Field>
                 <Field label="Periodo"><Input value={it.periodo} onChange={(e) => up({ periodo: e.target.value })} /></Field>
               </div>
