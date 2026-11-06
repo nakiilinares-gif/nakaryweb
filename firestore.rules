@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo la administradora (Nakary). Si cambias el correo en config.js, cámbialo aquí también.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'nakiilinares@gmail.com';
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // ---- Contenido público de la web (todos leen, solo Nakary escribe) ----
+    match /site/{docId}        { allow read: if true; allow write: if isAdmin(); }
+    match /media/{docId}       { allow read: if true; allow write: if isAdmin(); }
+    match /casos/{docId}       { allow read: if true; allow write: if isAdmin(); }
+    match /testimonios/{docId} { allow read: if true; allow write: if isAdmin(); }
+
+    // ---- Solicitudes del formulario de contacto ----
+    match /leads/{docId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'whatsapp', 'interest', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && request.resource.data.email is string && request.resource.data.email.size() <= 160
+        && request.resource.data.whatsapp is string && request.resource.data.whatsapp.size() <= 40
+        && request.resource.data.interest is string && request.resource.data.interest.size() <= 120;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---- Zona privada de clientas: cada una ve SOLO lo suyo ----
+    match /clientas/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow write: if isAdmin();
+
+      match /medidas/{medidaId} {
+        allow read: if isAdmin() || isOwner(uid);
+        allow write: if isAdmin();
+      }
+    }
+  }
+}
